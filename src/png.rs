@@ -22,7 +22,7 @@ impl Png {
 
     /// Creates a `Png` from a list of chunks using the correct header
     pub fn from_chunks(chunks: Vec<Chunk>) -> Self {
-        todo!()
+        Self { chunks }
     }
 
     /// Creates a `Png` from a file path
@@ -48,7 +48,7 @@ impl Png {
 
     /// Lists the `Chunk`s stored in this `Png`
     pub fn chunks(&self) -> &[Chunk] {
-        todo!()
+        &self.chunks
     }
 
     /// Searches for a `Chunk` with the specified `chunk_type` and returns the first
@@ -60,7 +60,11 @@ impl Png {
     /// Returns this `Png` as a byte sequence.
     /// These bytes will contain the header followed by the bytes of all of the chunks.
     pub fn as_bytes(&self) -> Vec<u8> {
-        todo!()
+        Self::STANDARD_HEADER
+            .iter()
+            .chain(self.chunks.iter().flat_map(|c| c.as_bytes().iter()))
+            .cloned()
+            .collect::<Vec<u8>>()
     }
 }
 
@@ -68,7 +72,7 @@ impl TryFrom<&[u8]> for Png {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Png> {
-        todo!()
+        let header: [u8; 8] = &bytes[0..8].try_into()?;
     }
 }
 

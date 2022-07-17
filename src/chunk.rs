@@ -80,7 +80,7 @@ impl fmt::Display for Chunk {
 }
 
 impl Chunk {
-    fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
+    pub(crate) fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
         let combined_collection: Vec<u8> = chunk_type
             .bytes()
             .iter()
@@ -95,27 +95,27 @@ impl Chunk {
         }
     }
 
-    fn length(&self) -> u32 {
+    pub(crate) fn length(&self) -> u32 {
         self.data.len() as u32
     }
 
-    fn chunk_type(&self) -> &ChunkType {
+    pub(crate) fn chunk_type(&self) -> &ChunkType {
         &self.chunk_type
     }
 
-    fn data(&self) -> &[u8] {
+    pub(crate) fn data(&self) -> &[u8] {
         &self.data
     }
 
-    fn crc(&self) -> u32 {
+    pub(crate) fn crc(&self) -> u32 {
         self.crc
     }
 
-    fn data_as_string(&self) -> Result<String, ChunkError> {
+    pub(crate) fn data_as_string(&self) -> Result<String, ChunkError> {
         String::from_utf8(self.data.clone()).map_err(ChunkError::InvalidStringData)
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    pub(crate) fn as_bytes(&self) -> Vec<u8> {
         let length: u32 = self.data.len() as u32;
         length
             .to_be_bytes()
