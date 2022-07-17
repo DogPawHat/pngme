@@ -8,7 +8,7 @@ pub(crate) enum ChunkTypeError {
     BytesNotAlphabetic,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ChunkType {
     bytes: [u8; 4],
 }

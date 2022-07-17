@@ -13,7 +13,8 @@ enum ChunkError {
     Type(ChunkTypeError),
 }
 
-struct Chunk {
+#[derive(Debug, Clone)]
+pub(crate) struct Chunk {
     chunk_type: ChunkType,
     data: Vec<u8>,
     crc: u32,
