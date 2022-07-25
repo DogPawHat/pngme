@@ -5,7 +5,7 @@ use anyhow::{Context, bail};
 use crate::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ChunkType {
+pub struct ChunkType {
     bytes: [u8; 4],
 }
 
@@ -26,7 +26,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
         if !is_bytes_ascii_alphabetic(&value) {
             bail!("ChunkType: bytes must be ASCII alphabetic");
         }
-        Ok(ChunkType { bytes: value })
+        Ok(ChunkType { bytes: value }) 
     }
 }
 

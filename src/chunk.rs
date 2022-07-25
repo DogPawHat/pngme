@@ -8,7 +8,7 @@ use crate::{Error, Result};
 use crate::chunk_type::ChunkType;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Chunk {
+pub struct Chunk {
     chunk_type: ChunkType,
     data: Vec<u8>,
     crc: u32,
