@@ -1,12 +1,8 @@
-use std::array::TryFromSliceError;
 use std::fmt;
 use std::str::{from_utf8, FromStr};
+use anyhow::{Context, bail};
 
-#[derive(Debug)]
-pub(crate) enum ChunkTypeError {
-    InvalidSliceLength(TryFromSliceError),
-    BytesNotAlphabetic,
-}
+use crate::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ChunkType {
@@ -24,24 +20,24 @@ fn is_bytes_ascii_alphabetic(bytes: &[u8; 4]) -> bool {
 }
 
 impl TryFrom<[u8; 4]> for ChunkType {
-    type Error = ChunkTypeError;
+    type Error = Error;
 
-    fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {
-        match is_bytes_ascii_alphabetic(&value) {
-            true => Ok(ChunkType { bytes: value }),
-            false => Err(Self::Error::BytesNotAlphabetic),
+    fn try_from(value: [u8; 4]) -> Result<Self> {
+        if !is_bytes_ascii_alphabetic(&value) {
+            bail!("ChunkType: bytes must be ASCII alphabetic");
         }
+        Ok(ChunkType { bytes: value })
     }
 }
 
 impl FromStr for ChunkType {
-    type Err = ChunkTypeError;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         let s_as_bytes: [u8; 4] = s
             .as_bytes()
             .try_into()
-            .map_err(|e| Self::Err::InvalidSliceLength(e))?;
+            .context("ChunkType: chunk type string must be 4 bytes long")?;
         Self::try_from(s_as_bytes)
     }
 }

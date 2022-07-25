@@ -1,17 +1,11 @@
-use crate::chunk_type::{ChunkType, ChunkTypeError};
-use crc::{Crc, CRC_32_ISO_HDLC};
-use std::{array::TryFromSliceError, fmt, string::FromUtf8Error};
+use std::fmt;
+use std::io::{BufReader, Read};
 
-#[derive(Debug)]
-enum ChunkError {
-    NotEnoughBytesCRC(TryFromSliceError),
-    NotEnoughBytesLength(TryFromSliceError),
-    NotEnoughBytesType(TryFromSliceError),
-    NotEnoughBytesData,
-    InvalidStringData(FromUtf8Error),
-    InvalidCRC,
-    Type(ChunkTypeError),
-}
+use anyhow::{bail, Context};
+use crc::{Crc, CRC_32_ISO_HDLC};
+
+use crate::{Error, Result};
+use crate::chunk_type::ChunkType;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Chunk {
@@ -20,34 +14,37 @@ pub(crate) struct Chunk {
     crc: u32,
 }
 
-impl From<ChunkTypeError> for ChunkError {
-    fn from(e: ChunkTypeError) -> Self {
-        Self::Type(e)
-    }
-}
-
 impl TryFrom<&[u8]> for Chunk {
-    type Error = ChunkError;
+    type Error = Error;
 
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let length_field: [u8; 4] = value[0..4]
-            .try_into()
-            .map_err(ChunkError::NotEnoughBytesLength)?;
-        let chunk_type_field: [u8; 4] = value[4..8]
-            .try_into()
-            .map_err(ChunkError::NotEnoughBytesType)?;
+    fn try_from(value: &[u8]) -> Result<Self> {
+        let mut reader = BufReader::new(value);
 
+        let mut length_field: [u8; 4] = [0, 0, 0, 0]; 
+        reader.read_exact(&mut length_field).context("Chunk: Not enough bytes in the length field")?;
         let length = u32::from_be_bytes(length_field);
-        let chunk_type = ChunkType::try_from(chunk_type_field)?;
 
-        let data = value[8..(length + 8) as usize].to_vec();
-        if data.len() != length as usize {
-            return Err(ChunkError::NotEnoughBytesData);
+        let mut chunk_type_field: [u8; 4] = [0, 0, 0, 0];
+        reader.read_exact(&mut chunk_type_field)?;
+        let chunk_type = ChunkType::try_from(chunk_type_field).context("Chunk: Not enough bytes in the chunck type field")?;
+
+        let mut data_handle = reader.take(length as u64);
+        let mut data = Vec::with_capacity(length as usize);
+        let read_len = data_handle.read_to_end(&mut data)?;
+        
+        if data.len() != length as usize && read_len != length as usize {
+            bail!("Chunk: Not enough bytes in the data field");
         }
 
-        let crc_field = value[(length + 8) as usize..]
-            .try_into()
-            .map_err(ChunkError::NotEnoughBytesCRC)?;
+        // This should never happen (famous last words)
+        if data.len() != read_len {
+            panic!("OH NOES");
+        }
+
+        let mut reader = data_handle.into_inner();
+
+        let mut crc_field: [u8; 4] = [0, 0, 0, 0];
+        reader.read_exact(&mut crc_field).context("Chunk: Not enough bytes in the CRC field")?;
         let crc = u32::from_be_bytes(crc_field);
 
         let combined_collection: Vec<u8> = chunk_type_field
@@ -56,7 +53,7 @@ impl TryFrom<&[u8]> for Chunk {
             .copied()
             .collect();
         if crc != Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&combined_collection) {
-            return Err(ChunkError::InvalidCRC);
+            bail!("Chunk: Crc check failed");
         }
 
         Ok(Chunk {
@@ -111,8 +108,8 @@ impl Chunk {
         self.crc
     }
 
-    pub(crate) fn data_as_string(&self) -> Result<String, ChunkError> {
-        String::from_utf8(self.data.clone()).map_err(ChunkError::InvalidStringData)
+    pub(crate) fn data_as_string(&self) -> Result<String> {
+        String::from_utf8(self.data.clone()).context("Chunk: Data is not valid UTF-8")
     }
 
     pub(crate) fn as_bytes(&self) -> Vec<u8> {
@@ -222,6 +219,27 @@ mod tests {
         let chunk_type = "RuSt".as_bytes();
         let message_bytes = "This is where your secret message will be!".as_bytes();
         let crc: u32 = 2882656333;
+
+        let chunk_data: Vec<u8> = data_length
+            .to_be_bytes()
+            .iter()
+            .chain(chunk_type.iter())
+            .chain(message_bytes.iter())
+            .chain(crc.to_be_bytes().iter())
+            .copied()
+            .collect();
+
+        let chunk = Chunk::try_from(chunk_data.as_ref());
+
+        assert!(chunk.is_err());
+    }
+
+    #[test]
+    fn test_wrong_length_chunk_from_bytes() {
+        let data_length: u32 = 42;
+        let chunk_type = "RuSt".as_bytes();
+        let message_bytes = "This is where your secret message will be!".as_bytes();
+        let crc: u16 = 3245;
 
         let chunk_data: Vec<u8> = data_length
             .to_be_bytes()
