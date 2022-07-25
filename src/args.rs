@@ -30,7 +30,7 @@ pub struct EncodeArgs {
 
 #[derive(Debug, Args)]
 pub struct DecodeArgs {
-    #[clap(required = false, parse(from_os_str))]
+    #[clap(required = true, parse(from_os_str))]
     pub file_path: PathBuf,
     #[clap(required = true)]
     pub chunk_type: String,
@@ -39,7 +39,7 @@ pub struct DecodeArgs {
 
 #[derive(Debug, Args)]
 pub struct RemoveArgs {
-    #[clap(required = false, parse(from_os_str))]
+    #[clap(required = true, parse(from_os_str))]
     pub file_path: PathBuf,
     #[clap(required = true)]
     pub chunk_type: String,
@@ -47,6 +47,6 @@ pub struct RemoveArgs {
 
 #[derive(Debug, Args)]
 pub struct PrintArgs {
-    #[clap(required = false, parse(from_os_str))]
+    #[clap(required = true, parse(from_os_str))]
     pub file_path: PathBuf,
 }

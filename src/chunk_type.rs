@@ -1,6 +1,6 @@
+use anyhow::{bail, Context};
 use std::fmt;
 use std::str::{from_utf8, FromStr};
-use anyhow::{Context, bail};
 
 use crate::{Error, Result};
 
@@ -26,7 +26,7 @@ impl TryFrom<[u8; 4]> for ChunkType {
         if !is_bytes_ascii_alphabetic(&value) {
             bail!("ChunkType: bytes must be ASCII alphabetic");
         }
-        Ok(ChunkType { bytes: value }) 
+        Ok(ChunkType { bytes: value })
     }
 }
 
@@ -44,10 +44,22 @@ impl FromStr for ChunkType {
 
 impl fmt::Display for ChunkType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match from_utf8(&self.bytes) {
-            Ok(str) => write!(f, "{}", str),
-            Err(_) => Err(fmt::Error),
-        }
+        writeln!(f, "ChunkType {{",)?;
+        writeln!(
+            f,
+            "  Data: {:?}",
+            match from_utf8(&self.bytes) {
+                Ok(str) => str,
+                Err(_) => return Err(fmt::Error),
+            }
+        )?;
+        writeln!(f, "  Valid: {}", self.is_valid())?;
+        writeln!(f, "  Critical: {}", self.is_critical())?;
+        writeln!(f, "  Public: {}", self.is_public())?;
+        writeln!(f, "  Reserved valid: {}", self.is_reserved_bit_valid())?;
+        writeln!(f, "  Safe to copy: {}", self.is_safe_to_copy())?;
+        writeln!(f, "}}",)?;
+        Ok(())
     }
 }
 

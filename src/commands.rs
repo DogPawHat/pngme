@@ -3,16 +3,15 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Ok};
 
-use crate::Result;
 use crate::args::{DecodeArgs, EncodeArgs, PrintArgs, RemoveArgs};
 use crate::chunk::Chunk;
 use crate::chunk_type::ChunkType;
 use crate::png::Png;
+use crate::Result;
 
 /// Encodes a message into a PNG file and saves the result
 pub fn encode(args: EncodeArgs) -> Result<()> {
-    let file = fs::read(args.file_path.as_path())?;
-    let mut png = Png::try_from(file.as_slice())?;
+    let mut png = Png::from_file(args.file_path.as_path())?;
     let chunk = Chunk::new(
         ChunkType::from_str(&args.chunk_type)?,
         args.message.as_bytes().to_vec(),
@@ -30,13 +29,8 @@ pub fn encode(args: EncodeArgs) -> Result<()> {
 
 /// Searches for a message hidden in a PNG file and prints the message if one is found
 pub fn decode(args: DecodeArgs) -> Result<()> {
-    let file = fs::read(args.file_path)?;
-    let png = Png::try_from(file.as_slice())?;
-    let chunk_type = ChunkType::from_str(&args.chunk_type)?;
-    let chunk = png
-        .chunks()
-        .iter()
-        .find(|chunk| *chunk.chunk_type() == chunk_type);
+    let png = Png::from_file(args.file_path.as_path())?;
+    let chunk = png.chunk_by_type(&args.chunk_type);
 
     match chunk {
         Some(chunk) => {
@@ -50,8 +44,7 @@ pub fn decode(args: DecodeArgs) -> Result<()> {
 
 /// Removes a chunk from a PNG file and saves the result
 pub fn remove(args: RemoveArgs) -> Result<()> {
-    let file = fs::read(args.file_path.as_path())?;
-    let mut png = Png::try_from(file.as_slice())?;
+    let mut png = Png::from_file(args.file_path.as_path())?;
 
     png.remove_chunk(&args.chunk_type)?;
 
